@@ -10,6 +10,7 @@ private:
 
 public:
   Device(int p);
+  void set_pin(int p);
   void init();
 
   void on();

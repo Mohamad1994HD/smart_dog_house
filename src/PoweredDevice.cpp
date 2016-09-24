@@ -8,6 +8,10 @@ void Device::init(){
   old_status = false;
 }
 
+void Device::set_pin(int p){
+  pin = p;
+}
+
 void Device::on(){
   digitalWrite(pin, HIGH);
 }
