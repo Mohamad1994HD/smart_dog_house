@@ -11,6 +11,10 @@ void Sensor::set_on_trigger(callback cback){
   on_trigger = cback;
 }
 
+void Sensor::set_on_not_triggered(callback cback){
+  on_not_triggered = cback;
+}
+
 void Sensor::set_trigger_status(trigger_status ts){
   status_trigger = ts;
 }
@@ -19,52 +23,49 @@ void Sensor::set_trigger_status(trigger_status ts){
 void Sensor::run(){
 
   int val = get_val();
-
   if (val == old_val){
     return;
   }
-
   old_val = val;
 
-  //bool dispached = false;
+  bool dispached = false;
 
   switch (status_trigger) {
     case EQUAL:
       if (val == trigger_val){
-        on_trigger();// dispached = true;
+        dispached = true;
       }
     break;
     case GREATER_OR_EQUAL:
       if (val >= trigger_val){
-        on_trigger();// dispached = true;
+        dispached = true;
       }
     break;
     case SMALLER_OR_EQUAL:
       if (val <= trigger_val){
-        on_trigger();// dispached = true;
+        dispached = true;
       }
     break;
     case GREATER:
       if (val > trigger_val){
-        on_trigger(); //dispached = true;
+        dispached = true;
       }
     break;
     case SMALLER:
       if (val < trigger_val){
-        on_trigger();// dispached = true;
+        dispached = true;
       }
     break;
     default:
     break;
-  }
-  //if (!dispached){
-//    on_not_triggered();
-//  }
+}
+    if (dispached){
+      on_trigger();
+    }else{
+      on_not_triggered();
+    }
 }
 
-void Sensor::set_on_not_triggered(callback cback){
-  on_not_triggered = cback;
-}
 
 int Sensor::get_val(){
   return analogRead(pin);

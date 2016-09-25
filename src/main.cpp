@@ -29,7 +29,7 @@ DHT dht(6, DHT22);
 TempSensor Temp_sensor(6, dht);
 
 // Timer
-Timer timer_;
+Timer clock_;
 
 void on_command(int device_num, uint8_t command){
     switch(device_num){
@@ -43,7 +43,7 @@ void on_command(int device_num, uint8_t command){
       break;
       case 3:
       // Lights
-      Led_strip.status = (bool)command;
+      //Led_strip.status = (bool)command;
       break;
       case 4:
       dispenser.set_dispense_time(1000);
@@ -137,36 +137,52 @@ void on_msg_received(int a[], int sz)
   }
 }
 
-void on_water_need(){
-  Serial.println("Dispensing water");
-  dispenser.set_dispenser_status(DISPENSE_WATER);
+
+////// Sensory callbacks
+// light
+void on_not_light_triggered(){
+  Serial.print("Light light: ");
+  Serial.println(light_sensor.read());
+  if(!connection){
+    Led_strip.status = false;
+  }
 }
 
-
-void on_food_time(){
-  Serial.println("Dispensing food");
-  dispenser.set_dispenser_status(DISPENSE_WATER);
-}
-
-void on_light_dim(){
-  Serial.println("Dim light");
+void on_light_triggered(){
+  Serial.print("Dim light:");
+  Serial.println(light_sensor.read());
   if (!connection){
     Led_strip.status = true;
   }
 }
 
-void on_temp(){
+// Temperature
+void on_temp_triggered(){
   Serial.println("Temperature Low");
   Serial.println("Turning On Heater..");
-  Serial.println(Temp_sensor.get_val());
+  Serial.println(Temp_sensor.read());
   Fan.status = true;
   Heater.status = true;
+
 }
 
-void on_light(){
-  Serial.println("Light light");
-  //Led_strip.status = false;
+void on_not_temp_triggered(){
+  Serial.print("Temperature good: "); Serial.println(Temp_sensor.read());
 }
+
+// water need Sensor
+void on_water_need(){
+  Serial.println("Dispensing water");
+  dispenser.set_dispenser_status(DISPENSE_WATER);
+}
+
+void on_not_water_need(){}
+// food time
+void on_food_time(){
+  Serial.println("Dispensing food");
+  dispenser.set_dispenser_status(DISPENSE_WATER);
+}
+void on_not_food_time(){}
 
 void on_dog_inside(){
   Serial.println("Dog is inside");
@@ -175,7 +191,7 @@ void on_dog_inside(){
   Serial.print(irsys.get_sensors_vals(3)); Serial.print(" ");
 }
 
-
+// action callback to commit changes to outputs
 void on_action_schedule(){
   Serial.println("Commiting changes");
   Fan.commit();
@@ -191,6 +207,7 @@ void run_temp_sensor(){
 }
 
 void run_light_sensor(){
+  Serial.println("Checking light intensity");
   light_sensor.run();
 }
 
@@ -232,19 +249,21 @@ void setup() {
   water_sensor.trigger_val = 200;
   water_sensor.set_trigger_status(SMALLER);
   water_sensor.set_on_trigger(on_water_need);
+  water_sensor.set_on_not_triggered(on_not_water_need);
   // Light Intensity Sensor
   light_sensor.init();
-  light_sensor.time_interval = 2000;
+  light_sensor.time_interval = 2500;
   light_sensor.trigger_val = 500;
   light_sensor.set_trigger_status(SMALLER);
-  light_sensor.set_on_trigger(on_light_dim);
-  light_sensor.set_on_not_triggered(on_light);
+  light_sensor.set_on_trigger(on_light_triggered);
+  light_sensor.set_on_not_triggered(on_not_light_triggered);
   // Temperature Sensor
   Temp_sensor.init();
   Temp_sensor.time_interval = 2000;
   Temp_sensor.trigger_val = 30;
   Temp_sensor.set_trigger_status(SMALLER);
-  Temp_sensor.set_on_trigger(on_temp);
+  Temp_sensor.set_on_trigger(on_temp_triggered);
+  Temp_sensor.set_on_not_triggered(on_not_temp_triggered);
 
   // initialize SerialExtractor
   ser.SetCallBack(on_msg_received);
@@ -254,16 +273,15 @@ void setup() {
  // initialize serial port for logging messages
   Serial.begin(9600);
 
-  // initialize timer callbacks
-  timer_.every(ACTION_TIME, on_action_schedule);
-  timer_.every(light_sensor.time_interval, run_light_sensor);
-  timer_.every(Temp_sensor.time_interval, run_temp_sensor);
-  timer_.every(water_sensor.time_interval, run_water_sensor);
-  timer_.every(irsys.time_interval, run_irsys);
+// initialize timer callbacks
+ clock_.every(ACTION_TIME, on_action_schedule);
+ clock_.every(light_sensor.time_interval, run_light_sensor);
+ clock_.every(Temp_sensor.time_interval, run_temp_sensor);
+ clock_.every(water_sensor.time_interval, run_water_sensor);
+ clock_.every(irsys.time_interval, run_irsys);
   // food timer
 }
 
-long t=0;
 unsigned long BLINK_TIME = 1000;
 
 
@@ -273,15 +291,15 @@ void loop() {
     auto flasher = []()->void{
       Led_strip.status = !Led_strip.status;
     };
-    timer_.after(BLINK_TIME, flasher);
+    clock_.after(BLINK_TIME, flasher);
 
   }else{
     //check fan config
 
     // if light < thresshold
-    if (light_sensor.read() > light_sensor.trigger_val ){
-      Led_strip.status = false;
-    }
+    // if (light_sensor.read() > light_sensor.trigger_val ){
+    //   Led_strip.status = false;
+    // }
 
     //if dog infront of water sensor
     // done via callback
@@ -291,12 +309,12 @@ void loop() {
     // if dog inside
       // check fan config
       // if temperature > thresshold
-        if (Temp_sensor.read() > Temp_sensor.trigger_val){
-          Fan.status = false; Heater.status=false;
-        }
+        // if (Temp_sensor.read() > Temp_sensor.trigger_val){
+        //   Fan.status = false; Heater.status=false;
+        // }
         // check fan config
 
   }
 
-  timer_.update();
+  clock_.update();
 }

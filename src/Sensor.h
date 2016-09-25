@@ -17,7 +17,7 @@ private:
   callback on_not_triggered;
 public:
   Sensor(uint8_t pin);
-  unsigned int time_interval;
+  unsigned long time_interval;
   int trigger_val;
 
   void init();
