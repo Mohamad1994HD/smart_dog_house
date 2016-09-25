@@ -1,4 +1,3 @@
-//#include "Connector.h"
 #include "Recources.h"
 
 SoftwareSerial soft_ser(12,13);
@@ -28,6 +27,9 @@ Sensor light_sensor(A1);
 
 DHT dht(6, DHT22);
 TempSensor Temp_sensor(6, dht);
+
+// Timer
+Timer timer_;
 
 void on_command(int device_num, uint8_t command){
     switch(device_num){
@@ -137,13 +139,20 @@ void on_msg_received(int a[], int sz)
 
 void on_water_need(){
   Serial.println("Dispensing water");
-  dispenser.set_dispense_time(2000);
-  dispenser.set_dispenser_status(DISPENSE_FOOD);
+  dispenser.set_dispenser_status(DISPENSE_WATER);
+}
+
+
+void on_food_time(){
+  Serial.println("Dispensing food");
+  dispenser.set_dispenser_status(DISPENSE_WATER);
 }
 
 void on_light_dim(){
   Serial.println("Dim light");
-  Led_strip.status = true;
+  if (!connection){
+    Led_strip.status = true;
+  }
 }
 
 void on_temp(){
@@ -166,6 +175,34 @@ void on_dog_inside(){
   Serial.print(irsys.get_sensors_vals(3)); Serial.print(" ");
 }
 
+
+void on_action_schedule(){
+  Serial.println("Commiting changes");
+  Fan.commit();
+  Heater.commit();
+  Led_strip.commit();
+  dispenser.commit();
+}
+
+// Sensors callbacks interfaces
+// due to difficulty of passing class method as callback
+void run_temp_sensor(){
+  Temp_sensor.run();
+}
+
+void run_light_sensor(){
+  light_sensor.run();
+}
+
+void run_water_sensor(){
+  water_sensor.run();
+}
+
+void run_irsys(){
+  irsys.run();
+}
+////
+
 void setup() {
   // // Load Configuration
   TEMP_THRES_HOLD.load();
@@ -177,42 +214,53 @@ void setup() {
 
   //init IRsystem
   irsys.set_callback(on_dog_inside);
-  irsys.set_time_interval(1000);
-  irsys.set_threshold(150);
+  irsys.time_interval = 5000;
+  irsys.trigger_val = 150;
   irsys.init();
   // init devices
   Fan.init();
   Heater.init();
   Led_strip.init();
 
-  //init Sensors
-  water_sensor.init();
-  water_sensor.set_trigger_val(200);
-  water_sensor.set_trigger_status(SMALLER);
-  water_sensor.set_time_interval(2000);
-  water_sensor.set_on_trigger(on_water_need);
+  dispenser.set_dispense_time(2000);
+  dispenser.init();
 
+  //init Sensors
+  // Water sensor IR
+  water_sensor.init();
+  water_sensor.time_interval = 1000;
+  water_sensor.trigger_val = 200;
+  water_sensor.set_trigger_status(SMALLER);
+  water_sensor.set_on_trigger(on_water_need);
+  // Light Intensity Sensor
   light_sensor.init();
-  light_sensor.set_trigger_val(500);
+  light_sensor.time_interval = 2000;
+  light_sensor.trigger_val = 500;
   light_sensor.set_trigger_status(SMALLER);
-  light_sensor.set_time_interval(4000);
   light_sensor.set_on_trigger(on_light_dim);
   light_sensor.set_on_not_triggered(on_light);
-
+  // Temperature Sensor
   Temp_sensor.init();
-  Temp_sensor.set_trigger_val(30);
-  Temp_sensor.set_time_interval(1000);
+  Temp_sensor.time_interval = 2000;
+  Temp_sensor.trigger_val = 30;
   Temp_sensor.set_trigger_status(SMALLER);
   Temp_sensor.set_on_trigger(on_temp);
 
-  dispenser.init();
-
+  // initialize SerialExtractor
   ser.SetCallBack(on_msg_received);
   ser.SetDelimeter(":");
   ser.SetEndIndicator('#');
   ser.init(9600);
-
+ // initialize serial port for logging messages
   Serial.begin(9600);
+
+  // initialize timer callbacks
+  timer_.every(ACTION_TIME, on_action_schedule);
+  timer_.every(light_sensor.time_interval, run_light_sensor);
+  timer_.every(Temp_sensor.time_interval, run_temp_sensor);
+  timer_.every(water_sensor.time_interval, run_water_sensor);
+  timer_.every(irsys.time_interval, run_irsys);
+  // food timer
 }
 
 long t=0;
@@ -220,25 +268,18 @@ unsigned long BLINK_TIME = 1000;
 
 
 void loop() {
-  // Sensory systems
-irsys.run();
-water_sensor.run();
-light_sensor.run();
-Temp_sensor.run();
-//  Led_strip.commit();
-//
   ser.Run();
   if (connection){
-    if(millis() - t >= BLINK_TIME){
-        // if ledstatus = !ledstatus
-        Led_strip.status = !Led_strip.status;
-        t = millis();
-    }
+    auto flasher = []()->void{
+      Led_strip.status = !Led_strip.status;
+    };
+    timer_.after(BLINK_TIME, flasher);
+
   }else{
     //check fan config
 
     // if light < thresshold
-    if (light_sensor.get_val() > 500 ){
+    if (light_sensor.read() > light_sensor.trigger_val ){
       Led_strip.status = false;
     }
 
@@ -250,16 +291,12 @@ Temp_sensor.run();
     // if dog inside
       // check fan config
       // if temperature > thresshold
-        if (Temp_sensor.get_val() > 30){
+        if (Temp_sensor.read() > Temp_sensor.trigger_val){
           Fan.status = false; Heater.status=false;
         }
         // check fan config
 
   }
 
-  Fan.commit();
-  Heater.commit();
-  Led_strip.commit();
-  dispenser.commit();
-  //Fan.commit(); Heater.commit();
+  timer_.update();
 }

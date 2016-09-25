@@ -12,20 +12,16 @@ class Sensor{
 private:
   uint8_t pin;
   int old_val;
-  int trigger_val;
-  int time_interval;
-  unsigned long last_check;
-
   trigger_status status_trigger;
   callback on_trigger;
   callback on_not_triggered;
 public:
   Sensor(uint8_t pin);
+  unsigned int time_interval;
+  int trigger_val;
+
   void init();
   virtual void run();
-
-  void set_time_interval(int);
-  void set_trigger_val(int);
   void set_on_trigger(callback);
   void set_on_not_triggered(callback);
   void set_trigger_status(trigger_status);

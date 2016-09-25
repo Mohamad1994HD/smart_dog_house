@@ -10,11 +10,6 @@ void IRSystem::init(){
 }
 
 void IRSystem::run(){
-    if (millis() - t < time_interval){
-      return ;
-    }
-    t = millis();
-
     unsigned int val1 = analogRead(pin1);
     unsigned int val2 = analogRead(pin2);
     unsigned int val3 = analogRead(pin3);
@@ -29,21 +24,13 @@ void IRSystem::run(){
       return false;
     };
 
-    if (check_existence(val1, val2, val3, THRES_HOLD)){
+    if (check_existence(val1, val2, val3, trigger_val)){
       on_detection();
     }
 }
 
 void IRSystem::set_callback(callback cback){
   on_detection = cback;
-}
-
-void IRSystem::set_threshold(int t){
-  THRES_HOLD = t;
-}
-
-void IRSystem::set_time_interval(int t){
-  time_interval = t;
 }
 
 uint8_t IRSystem::get_sensors_vals(uint8_t p){

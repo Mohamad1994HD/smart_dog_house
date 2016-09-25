@@ -6,9 +6,6 @@ void Sensor::init(){
   pinMode(pin, INPUT);
 }
 
-void Sensor::set_trigger_val(int v){
-  trigger_val = v;
-}
 
 void Sensor::set_on_trigger(callback cback){
   on_trigger = cback;
@@ -18,15 +15,8 @@ void Sensor::set_trigger_status(trigger_status ts){
   status_trigger = ts;
 }
 
-void Sensor::set_time_interval(int t){
-  time_interval = t;
-}
 
 void Sensor::run(){
-  if(millis() - last_check < time_interval){
-    return;
-  }
-  last_check = millis();
 
   int val = get_val();
 

@@ -1,6 +1,8 @@
 #ifndef RESC
 #define RESC
 
+#define ACTION_TIME 1000
+
 #include "Arduino.h"
 #include "IRSystem.h"
 #include "SerialExtractor.h"
@@ -10,5 +12,6 @@
 #include "Dispenser.h"
 #include "Sensor.h"
 #include "DHT.h"
+#include <Timer.h>
 
 #endif
