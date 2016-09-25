@@ -29,6 +29,7 @@ public:
   void set_on_trigger(callback);
   void set_on_not_triggered(callback);
   void set_trigger_status(trigger_status);
+  int read();
   virtual int get_val();
 };
 

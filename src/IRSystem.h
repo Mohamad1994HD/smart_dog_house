@@ -3,9 +3,8 @@
 
 #include "Arduino.h"
 
-#define THRES_HOLD 150
 
-typedef void (*callback) ();
+typedef void (*callback) (void);
 
 class IRSystem{
 public:
@@ -14,10 +13,14 @@ public:
   void run();
 
   void set_callback(callback);
-
-
+  uint8_t get_sensors_vals(uint8_t);
+  void set_time_interval(int);
+  void set_threshold(int);
 private:
   int pin1,pin2,pin3;
+  unsigned int time_interval;
+  unsigned int THRES_HOLD;
+  unsigned long t;
   callback on_detection=NULL;
 };
 

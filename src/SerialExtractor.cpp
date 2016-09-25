@@ -1,32 +1,34 @@
 #include "SerialExtractor.h"
 
-
-SerialExtractor::SerialExtractor(char end,char const* deli, call_back function):endIndicator(end), delimeter(deli), callBack(function)
+SerialExtractor::SerialExtractor(SoftwareSerial &s, char end,char const* deli, call_back function):
+serial_obj(s),endIndicator(end), delimeter(deli), callBack(function)
 {
  resetCommand();
 
  this->SERIAL_RESULT = WAITING;
 }
 
-
+void SerialExtractor::init(long baudrate){
+  serial_obj.begin(baudrate);
+}
 
 void SerialExtractor::TryReadSerial()
 {
  char serialInByte;
  bool isData = false;
- if (Serial.available())
+ if (serial_obj.available())
  {
  isData = true;
    do
    {
-     serialInByte = Serial.read();
+     serialInByte = serial_obj.read();
      //this->command += serialInByte;
 
      this->cmd[siz] = serialInByte;
      siz++;
 
     // Serial.println(this->cmd);
-   } while ((serialInByte != endIndicator) && Serial.available());
+  } while ((serialInByte != endIndicator) && serial_obj.available());
  }
 this->cmd[this->siz] = '\0';
 
@@ -57,6 +59,7 @@ void SerialExtractor::resetCommand()
  }
   this->siz = 0;
 }
+
 
 void SerialExtractor::extractInfo(int a[], int &size)
 {
@@ -109,6 +112,7 @@ void SerialExtractor::Run()
  }
 }
 
+
 void SerialExtractor::DisplayError()
 {
  if(SERIAL_RESULT == ERROR_MSG_NOT_TERMINATED)
@@ -136,7 +140,6 @@ char const* SerialExtractor::GetDelimeter()
 {
  return this->delimeter;
 }
-
 void SerialExtractor::SetCallBack(call_back func)
 {
    this->callBack = func;

@@ -10,21 +10,26 @@ void IRSystem::init(){
 }
 
 void IRSystem::run(){
-    uint8_t val1 = analogRead(pin1);
-    uint8_t val2 = analogRead(pin2);
-    uint8_t val3 = analogRead(pin3);
+    if (millis() - t < time_interval){
+      return ;
+    }
+    t = millis();
 
-    auto check_existence = [](uint8_t v1,uint8_t v2,
-                         uint8_t v3) -> bool{
-      if ((v1 < THRES_HOLD && v2 < THRES_HOLD) ||
-          (v1 < THRES_HOLD && v3 < THRES_HOLD) ||
-          (v2 < THRES_HOLD && v3 < THRES_HOLD)){
+    unsigned int val1 = analogRead(pin1);
+    unsigned int val2 = analogRead(pin2);
+    unsigned int val3 = analogRead(pin3);
+
+    auto check_existence = [](int v1,int v2,
+                         int v3, int th) -> bool{
+      if ((v1 < th && v2 < th) ||
+          (v1 < th && v3 < th) ||
+          (v2 < th && v3 < th)){
             return true;
           }
       return false;
     };
 
-    if (check_existence(val1, val2, val3)){
+    if (check_existence(val1, val2, val3, THRES_HOLD)){
       on_detection();
     }
 }
@@ -33,8 +38,28 @@ void IRSystem::set_callback(callback cback){
   on_detection = cback;
 }
 
+void IRSystem::set_threshold(int t){
+  THRES_HOLD = t;
+}
+
+void IRSystem::set_time_interval(int t){
+  time_interval = t;
+}
+
+uint8_t IRSystem::get_sensors_vals(uint8_t p){
+  if (p == 1){
+    return analogRead(pin1);
+  }
+  if (p == 2){
+    return analogRead(pin2);
+  }
+  if (p == 3){
+    return analogRead(pin3);
+  }
+}
 
 /*
+ maher and mohammad 4/9/2016
 void IRSystem::run(){
   Serial.print(analogRead(pin1));
   Serial.print(" ");

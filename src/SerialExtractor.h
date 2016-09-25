@@ -24,38 +24,48 @@ Use:
 CAUTION: Displaying Error via DisplayError has a problem unknown till now
 */
 #include "Arduino.h"
+#include <SoftwareSerial.h>
+
 enum MsgState {SUCCESS, ERROR_MSG_NOT_TERMINATED, WAITING, ERROR_IN_DELIMETER};
+
 typedef void (*call_back) (int a[], int size);
 
+
 class SerialExtractor{
+  public :
+  SerialExtractor(SoftwareSerial &s, char end='#', char const* deli=":", call_back func=NULL);
+
+  MsgState SERIAL_RESULT;
+
+  void init(long);
+
+  void TryReadSerial();
+  void extractInfo(int *,int &);
+  void Run();
+
+  void resetCommand();
+  void DisplayError();
+
+  void SetCallBack(call_back);
+  void SetEndIndicator(char );
+  char GetEndIndicator();
+  void SetDelimeter(char const* );
+  char const* GetDelimeter();
+
+
   private:
 	//char delimeter;
 	char endIndicator;
 	char const*  delimeter;
-    char cmd[100];
-    int siz;
+  char cmd[100];
+  int siz;
 	call_back callBack;
 
-  public :
-	SerialExtractor(char end='#', char const* deli=":", call_back func=NULL);
-
-    MsgState SERIAL_RESULT;
-
-    void TryReadSerial();
-    void extractInfo(int *,int &);
-	void Run();
-
-	void resetCommand();
-	void DisplayError();
-
-	void SetCallBack(call_back);
-	void SetEndIndicator(char );
-	char GetEndIndicator();
-	void SetDelimeter(char const* );
-	char const* GetDelimeter();
+  SoftwareSerial &serial_obj;
 
 
 
 };
+
 
 #endif

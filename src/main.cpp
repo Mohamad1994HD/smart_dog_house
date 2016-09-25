@@ -1,14 +1,9 @@
 //#include "Connector.h"
-#include "Arduino.h"
-#include "SerialExtractor.h"
-#include "Config.h"
-#include "PoweredDevice.h"
-#include "28BYJ48.h"
-#include "Dispenser.h"
-#include "Sensor.h"
-#include "DHT.h"
+#include "Recources.h"
 
-SerialExtractor ser;
+SoftwareSerial soft_ser(12,13);
+SerialExtractor ser(soft_ser);
+
 bool connection = false;
 
 //Configurations
@@ -17,12 +12,17 @@ Config LIGHT_THRES_HOLD(1);
 Config FOOD_TIME_SPACE(2);
 Config FAN_STATUS(3);
 
-//devices
+//IR Detection System
+IRSystem irsys(A5, A3, A4);
+
+//Devices
 Device Fan(3);
 Device Heater(4);
 Device Led_strip(5);
+//Food-water Dispenser unit
 Dispenser dispenser(8, 9, 10, 11, 7);
 
+//Sensors
 Sensor water_sensor(A0);
 Sensor light_sensor(A1);
 
@@ -44,10 +44,12 @@ void on_command(int device_num, uint8_t command){
       Led_strip.status = (bool)command;
       break;
       case 4:
-      // Water
-      break;
-      case 5:
-      // Food
+      dispenser.set_dispense_time(1000);
+      if (command == 1){
+      dispenser.set_dispenser_status(DISPENSE_WATER);
+    }else if (command == 2){
+      dispenser.set_dispenser_status(DISPENSE_FOOD);
+    }
       break;
     }
 }
@@ -90,6 +92,13 @@ void on_disconnect(){
   setup();
 }
 
+void on_request(){
+  int light = light_sensor.read();
+  int temp = Temp_sensor.read();
+  int timer = 4;
+  soft_ser.print(temp); soft_ser.print(":"); soft_ser.print(light);
+  soft_ser.print(":"); soft_ser.println(timer);
+}
 
 void on_msg_received(int a[], int sz)
 {
@@ -113,6 +122,9 @@ void on_msg_received(int a[], int sz)
       Serial.println("Command");
       // dispatch the command write/read
       on_command(a[1], a[2]);
+    }else if (a[0] == 201){
+      Serial.println("Request");
+      on_request();
     }
     else if(a[0]==300){
       // config
@@ -147,6 +159,12 @@ void on_light(){
   //Led_strip.status = false;
 }
 
+void on_dog_inside(){
+  Serial.println("Dog is inside");
+  Serial.print(irsys.get_sensors_vals(1)); Serial.print(" ");
+  Serial.print(irsys.get_sensors_vals(2)); Serial.print(" ");
+  Serial.print(irsys.get_sensors_vals(3)); Serial.print(" ");
+}
 
 void setup() {
   // // Load Configuration
@@ -157,11 +175,17 @@ void setup() {
 
   connection = false;
 
+  //init IRsystem
+  irsys.set_callback(on_dog_inside);
+  irsys.set_time_interval(1000);
+  irsys.set_threshold(150);
+  irsys.init();
   // init devices
   Fan.init();
   Heater.init();
   Led_strip.init();
 
+  //init Sensors
   water_sensor.init();
   water_sensor.set_trigger_val(200);
   water_sensor.set_trigger_status(SMALLER);
@@ -176,7 +200,7 @@ void setup() {
   light_sensor.set_on_not_triggered(on_light);
 
   Temp_sensor.init();
-  Temp_sensor.set_trigger_val(36);
+  Temp_sensor.set_trigger_val(30);
   Temp_sensor.set_time_interval(1000);
   Temp_sensor.set_trigger_status(SMALLER);
   Temp_sensor.set_on_trigger(on_temp);
@@ -186,6 +210,8 @@ void setup() {
   ser.SetCallBack(on_msg_received);
   ser.SetDelimeter(":");
   ser.SetEndIndicator('#');
+  ser.init(9600);
+
   Serial.begin(9600);
 }
 
@@ -194,7 +220,8 @@ unsigned long BLINK_TIME = 1000;
 
 
 void loop() {
-  // put your main code here, to run repeatedly:
+  // Sensory systems
+irsys.run();
 water_sensor.run();
 light_sensor.run();
 Temp_sensor.run();
@@ -230,9 +257,9 @@ Temp_sensor.run();
 
   }
 
-  // Fan.commit();
-  // Heater.commit();
+  Fan.commit();
+  Heater.commit();
   Led_strip.commit();
   dispenser.commit();
-  Fan.commit(); Heater.commit();
+  //Fan.commit(); Heater.commit();
 }

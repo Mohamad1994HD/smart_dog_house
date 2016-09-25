@@ -80,6 +80,9 @@ int Sensor::get_val(){
   return analogRead(pin);
 }
 
+int Sensor::read(){
+  return old_val;
+}
 //
 TempSensor::TempSensor(uint8_t p,DHT &d):Sensor(p),dht(d){}
 
