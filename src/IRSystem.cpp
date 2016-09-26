@@ -1,18 +1,21 @@
 #include "IRSystem.h"
 
-IRSystem::IRSystem(int p1,int p2,int p3): pin1(p1), pin2(p2), pin3(p3){}
+IRSystem::IRSystem(Sensor &s1,Sensor &s2,Sensor &s3): sens1(s1), sens2(s2), sens3(s3){}
 
 void IRSystem::init(){
-  pinMode(pin1, INPUT);
-  pinMode(pin2, INPUT);
-  pinMode(pin3, INPUT);
-  //Serial.begin(9600);
+  sens1.init();
+  sens2.init();
+  sens3.init();
 }
 
 void IRSystem::run(){
-    unsigned int val1 = analogRead(pin1);
-    unsigned int val2 = analogRead(pin2);
-    unsigned int val3 = analogRead(pin3);
+    sens1.run();
+    sens2.run();
+    sens3.run();
+
+    unsigned int val1 = sens1.read();
+    unsigned int val2 = sens2.read();
+    unsigned int val3 = sens3.read();
 
     auto check_existence = [](int v1,int v2,
                          int v3, int th) -> bool{
@@ -25,7 +28,9 @@ void IRSystem::run(){
     };
 
     if (check_existence(val1, val2, val3, trigger_val)){
-      on_detection();
+      if(on_detection){on_detection();}
+    }else{
+      if(on_not_detection){on_not_detection();}
     }
 }
 
@@ -33,15 +38,19 @@ void IRSystem::set_callback(callback cback){
   on_detection = cback;
 }
 
+void IRSystem::set_not_callback(callback cback){
+  on_not_detection = cback;
+}
+
 uint8_t IRSystem::get_sensors_vals(uint8_t p){
   if (p == 1){
-    return analogRead(pin1);
+    return sens1.read();
   }
   if (p == 2){
-    return analogRead(pin2);
+    return sens2.read();
   }
   if (p == 3){
-    return analogRead(pin3);
+    return sens3.read();
   }
 }
 

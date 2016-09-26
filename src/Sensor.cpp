@@ -60,9 +60,9 @@ void Sensor::run(){
     break;
 }
     if (dispached){
-      on_trigger();
+      if(on_trigger != NULL) {on_trigger();}
     }else{
-      on_not_triggered();
+      if(on_not_triggered != NULL){on_not_triggered();}
     }
 }
 

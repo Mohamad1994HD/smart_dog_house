@@ -12,11 +12,14 @@ Config FOOD_TIME_SPACE(2);
 Config FAN_STATUS(3);
 
 //IR Detection System
-IRSystem irsys(A5, A3, A4);
+Sensor s1(A3);
+Sensor s2(A4);
+Sensor s3(A5);
+IRSystem irsys(s1, s2, s3);
 
 //Devices
-Device Fan(3);
-Device Heater(4);
+Device Fan(4);
+Device Heater(3);
 Device Led_strip(5);
 //Food-water Dispenser unit
 Dispenser dispenser(8, 9, 10, 11, 7);
@@ -64,7 +67,7 @@ void on_config(int a[]){
   FAN_STATUS.update(a[4]);
 }
 
-void sendConf(){
+void logConf(){
   Serial.print("TEMP:");
   Serial.println(TEMP_THRES_HOLD.read());
   Serial.print("LIGHT:");
@@ -77,7 +80,7 @@ void sendConf(){
 
 void on_connect(){
   // send Configurations
-  sendConf();
+  logConf();
 }
 
 
@@ -168,6 +171,7 @@ void on_temp_triggered(){
 
 void on_not_temp_triggered(){
   Serial.print("Temperature good: "); Serial.println(Temp_sensor.read());
+  Heater.status = false;
 }
 
 // water need Sensor
@@ -184,12 +188,15 @@ void on_food_time(){
 }
 void on_not_food_time(){}
 
+// Dog inside detection
 void on_dog_inside(){
   Serial.println("Dog is inside");
   Serial.print(irsys.get_sensors_vals(1)); Serial.print(" ");
   Serial.print(irsys.get_sensors_vals(2)); Serial.print(" ");
   Serial.print(irsys.get_sensors_vals(3)); Serial.print(" ");
 }
+
+void on_dog_outside(){}
 
 // action callback to commit changes to outputs
 void on_action_schedule(){
@@ -207,7 +214,6 @@ void run_temp_sensor(){
 }
 
 void run_light_sensor(){
-  Serial.println("Checking light intensity");
   light_sensor.run();
 }
 
@@ -229,11 +235,6 @@ void setup() {
 
   connection = false;
 
-  //init IRsystem
-  irsys.set_callback(on_dog_inside);
-  irsys.time_interval = 5000;
-  irsys.trigger_val = 150;
-  irsys.init();
   // init devices
   Fan.init();
   Heater.init();
@@ -264,7 +265,12 @@ void setup() {
   Temp_sensor.set_trigger_status(SMALLER);
   Temp_sensor.set_on_trigger(on_temp_triggered);
   Temp_sensor.set_on_not_triggered(on_not_temp_triggered);
-
+  //init IRsystem
+  irsys.set_callback(on_dog_inside);
+  irsys.set_not_callback(on_dog_outside);
+  irsys.time_interval = 5000;
+  irsys.trigger_val = 150;
+  irsys.init();
   // initialize SerialExtractor
   ser.SetCallBack(on_msg_received);
   ser.SetDelimeter(":");
