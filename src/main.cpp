@@ -4,12 +4,12 @@ SoftwareSerial soft_ser(12,13);
 SerialExtractor ser(soft_ser);
 
 bool connection = false;
-
+bool is_dog_inside = false;
 //Configurations
 Config TEMP_THRES_HOLD(0);
 Config LIGHT_THRES_HOLD(1);
 Config FOOD_TIME_SPACE(2);
-Config FAN_STATUS(3);
+Config Fan_STATUS(3);
 
 //IR Detection System
 Sensor s1(A3);
@@ -18,7 +18,7 @@ Sensor s3(A5);
 IRSystem irsys(s1, s2, s3);
 
 //Devices
-Device Fan(4);
+Fan fan(4);
 Device Heater(3);
 Device Led_strip(5);
 //Food-water Dispenser unit
@@ -37,8 +37,8 @@ Timer clock_;
 void on_command(int device_num, uint8_t command){
     switch(device_num){
       case 1:
-      // Fan
-      Fan.status = (bool)command;
+      // fan
+      fan.status = (bool)command;
       break;
       case 2:
       // Heater
@@ -64,7 +64,7 @@ void on_config(int a[]){
   TEMP_THRES_HOLD.update(a[1]);
   LIGHT_THRES_HOLD.update(a[2]);
   FOOD_TIME_SPACE.update(a[3]);
-  FAN_STATUS.update(a[4]);
+  Fan_STATUS.update(a[4]);
 }
 
 void logConf(){
@@ -74,8 +74,8 @@ void logConf(){
   Serial.println(LIGHT_THRES_HOLD.read());
   Serial.print("FOOD:");
   Serial.println(FOOD_TIME_SPACE.read());
-  Serial.print("FAN:");
-  Serial.println(FAN_STATUS.read());
+  Serial.print("fan:");
+  Serial.println(Fan_STATUS.read());
 }
 
 void on_connect(){
@@ -87,7 +87,7 @@ void on_connect(){
 void on_disconnect(){
   //commit changes to config
   TEMP_THRES_HOLD.commit();
-  FAN_STATUS.commit();
+  Fan_STATUS.commit();
   FOOD_TIME_SPACE.commit();
   LIGHT_THRES_HOLD.commit();
 
@@ -161,15 +161,24 @@ void on_light_triggered(){
 
 // Temperature
 void on_temp_triggered(){
+  if(!is_dog_inside){return;}
+
   Serial.println("Temperature Low");
   Serial.println("Turning On Heater..");
   Serial.println(Temp_sensor.read());
-  Fan.status = true;
+  fan.status = true;
   Heater.status = true;
 
 }
 
 void on_not_temp_triggered(){
+// Check fan mode winter/summer
+  if(fan.mode == SUMMER){
+    if(is_dog_inside){fan.status=true;}
+  }else{ // so no cold air would pass through
+    fan.status = false;
+  }
+
   Serial.print("Temperature good: "); Serial.println(Temp_sensor.read());
   Heater.status = false;
 }
@@ -191,17 +200,23 @@ void on_not_food_time(){}
 // Dog inside detection
 void on_dog_inside(){
   Serial.println("Dog is inside");
+  // if fan mode == summer turn it on, else nop
+  fan.status = true;
+
   Serial.print(irsys.get_sensors_vals(1)); Serial.print(" ");
   Serial.print(irsys.get_sensors_vals(2)); Serial.print(" ");
   Serial.print(irsys.get_sensors_vals(3)); Serial.print(" ");
 }
 
-void on_dog_outside(){}
+void on_dog_outside(){
+  Serial.println("Dog is outside");
+  fan.status = false;
+}
 
 // action callback to commit changes to outputs
 void on_action_schedule(){
   Serial.println("Commiting changes");
-  Fan.commit();
+  fan.commit();
   Heater.commit();
   Led_strip.commit();
   dispenser.commit();
@@ -231,12 +246,12 @@ void setup() {
   TEMP_THRES_HOLD.load();
   LIGHT_THRES_HOLD.load();
   FOOD_TIME_SPACE.load();
-  FAN_STATUS.load();
+  Fan_STATUS.load();
 
   connection = false;
 
   // init devices
-  Fan.init();
+  fan.init();
   Heater.init();
   Led_strip.init();
 
@@ -316,7 +331,7 @@ void loop() {
       // check fan config
       // if temperature > thresshold
         // if (Temp_sensor.read() > Temp_sensor.trigger_val){
-        //   Fan.status = false; Heater.status=false;
+        //   fan.status = false; Heater.status=false;
         // }
         // check fan config
 

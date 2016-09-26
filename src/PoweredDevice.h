@@ -20,4 +20,10 @@ public:
   void commit();
 };
 
+enum Mode{SUMMER, WINTER};
+class Fan:public Device{
+public:
+  Fan(int);
+  Mode mode;
+};
 #endif

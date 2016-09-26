@@ -30,3 +30,9 @@ void Device::commit(){
     old_status = status;
   }
 }
+
+//////////////
+
+Fan::Fan(int p):Device(p){
+  mode = SUMMER;
+}
