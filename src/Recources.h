@@ -1,7 +1,7 @@
 #ifndef RESC
 #define RESC
 
-#define ACTION_TIME 1000
+#define ACTION_TIME 300
 
 #include "Arduino.h"
 #include <IRSystem.h>

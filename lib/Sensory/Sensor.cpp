@@ -23,10 +23,7 @@ void Sensor::set_trigger_status(trigger_status ts){
 void Sensor::run(){
 
   int val = get_val();
-  if (val == old_val){
-    return;
-  }
-  old_val = val;
+
 
   bool dispached = false;
 
@@ -64,6 +61,11 @@ void Sensor::run(){
     }else{
       if(on_not_triggered != NULL){on_not_triggered();}
     }
+
+    if (val == old_val){
+      return;
+    }
+    old_val = val;
 }
 
 
